@@ -30,12 +30,16 @@
 # ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from python_qt_binding.QtCore import qVersion
 from qt_gui.plugin import Plugin
 from qt_gui_py_common.simple_settings_dialog import SimpleSettingsDialog
 
 from shell_widget import ShellWidget
+import argparse
 
 try:
+    if qVersion().startswith('5.'):
+        raise ImportError('embedding is not support with Qt 5')
     from xterm_widget import XTermWidget, is_xterm_available
     _has_xterm = is_xterm_available()
 except ImportError:
@@ -43,6 +47,8 @@ except ImportError:
     _has_xterm = False
 
 try:
+    if qVersion().startswith('5.'):
+        raise ImportError('spyderlib does not support Qt 5 yet')
     from spyder_shell_widget import SpyderShellWidget
     _has_spyderlib = True
 except ImportError:
@@ -59,13 +65,13 @@ class Shell(Plugin):
         {
             'title': 'XTerm',
             'widget_class': XTermWidget,
-            'description': 'Fully functional embedded XTerm (needs xterm and only works on X11).',
+            'description': 'Fully functional embedded XTerm (needs xterm, only works on X11 with Qt 4).',
             'enabled': _has_xterm,
         },
         {
             'title': 'SpyderShell',
             'widget_class': SpyderShellWidget,
-            'description': 'Advanced shell (needs spyderlib).',
+            'description': 'Advanced shell (needs spyderlib, only works with Qt 4).',
             'enabled': _has_spyderlib,
         },
         {
@@ -80,8 +86,15 @@ class Shell(Plugin):
         super(Shell, self).__init__(context)
         self._context = context
         self.setObjectName('Shell')
+        self.args = self._parse_args(context.argv())
 
         self._widget = None
+
+    def _parse_args(self, argv):
+        parser = argparse.ArgumentParser(prog='rqt_shell', add_help=False)
+        parser.add_argument('-i', '--init_script', default=""
+                            help="load this script after startup in $SHELL")
+        return parser.parse_args(argv)
 
     def _switch_shell_widget(self):
         # check for available shell type
@@ -95,7 +108,7 @@ class Shell(Plugin):
             self._context.remove_widget(self._widget)
             self._widget.close()
 
-        self._widget = selected_shell['widget_class']()
+        self._widget = selected_shell['widget_class'](scriptPath=self.args.init_script)
         self._widget.setWindowTitle(selected_shell['title'])
         if self._context.serial_number() > 1:
             self._widget.setWindowTitle(self._widget.windowTitle() + (' (%d)' % self._context.serial_number()))

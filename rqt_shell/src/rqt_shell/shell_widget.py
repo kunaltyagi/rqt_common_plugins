@@ -34,12 +34,12 @@ import os
 import rospkg
 
 from python_qt_binding import loadUi
-from python_qt_binding.QtGui import QWidget
+from python_qt_binding.QtWidgets import QWidget
 import shell_text_edit
 
 
 class ShellWidget(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, scriptPath=None):
         super(ShellWidget, self).__init__(parent=parent)
         rp = rospkg.RosPack()
         ui_file = os.path.join(rp.get_path('rqt_shell'), 'resource', 'shell_widget.ui')
